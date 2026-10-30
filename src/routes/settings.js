@@ -2,8 +2,9 @@
 const router = require('express').Router();
 const bcrypt = require('bcryptjs');
 const { pool, audit, getSettings } = require('../db');
-const { requireLogin, requireRole, wrap, HttpError } = require('../auth');
+const { requireLogin, requireRole, wrap, HttpError, forgetUser } = require('../auth');
 const { runArchive } = require('../archiver');
+const { loadDemoData } = require('../demo');
 
 const EDITABLE = ['shop_name', 'shop_address', 'shop_phone', 'shop_logo', 'default_margin', 'retention_days'];
 
@@ -64,8 +65,7 @@ router.put('/users/:id', requireRole('admin'), wrap(async (req, res) => {
     checkPassword(password);
     await pool.query('UPDATE users SET password_hash = ? WHERE id = ?', [await bcrypt.hash(password, 12), id]);
   }
-  // Kick a deactivated / changed user out of any open sessions.
-  await pool.query("DELETE FROM sessions WHERE data LIKE ?", [`%"user":{"id":${id},%`]).catch(() => {});
+  forgetUser(id); // this instance applies the change at once; others within a minute
   await audit(null, req.session.user.id, 'user_edit', { id, role, active: !!active, password_changed: !!password });
   res.json({ ok: true });
 }));
@@ -79,6 +79,11 @@ router.post('/me/password', requireLogin, wrap(async (req, res) => {
   await pool.query('UPDATE users SET password_hash = ? WHERE id = ?', [await bcrypt.hash(password, 12), req.session.user.id]);
   await audit(null, req.session.user.id, 'password_change', '');
   res.json({ ok: true });
+}));
+
+// Fill an empty shop with sample data so the system can be tried out.
+router.post('/demo-data', requireRole('admin'), wrap(async (req, res) => {
+  res.json(await loadDemoData(req.session.user.id));
 }));
 
 router.get('/audit', requireRole('admin'), wrap(async (req, res) => {

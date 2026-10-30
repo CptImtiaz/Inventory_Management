@@ -13,7 +13,7 @@ const pool = mysql.createPool({
   ssl: process.env.DB_SSL === 'true'
     ? { rejectUnauthorized: true, ...(process.env.DB_SSL_CA ? { ca: process.env.DB_SSL_CA.replace(/\\n/g, '\n') } : {}) }
     : undefined,
-  connectionLimit: process.env.VERCEL ? 3 : 10,
+  connectionLimit: process.env.VERCEL ? 5 : 10,
   decimalNumbers: true,
   dateStrings: true,
   timezone: 'local',
@@ -35,28 +35,51 @@ const DEFAULT_SETTINGS = {
   shop_address: 'Dhaka, Bangladesh',
   shop_phone: '',
   shop_logo: '',
+  shop_tagline: '',
   default_margin: '15',
   retention_days: '60',
 };
 
+// Bump when the schema changes; a cold start whose database is already at this version
+// skips the migration entirely (one query instead of ~30 round trips).
+const SCHEMA_VERSION = '3';
+
+async function ensureColumn(table, column, ddl) {
+  const [[{ n }]] = await pool.query(
+    'SELECT COUNT(*) n FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = ? AND column_name = ?', [table, column]);
+  if (!n) await pool.query(`ALTER TABLE ${table} ADD COLUMN ${column} ${ddl}`);
+}
+
 async function migrate() {
+  const t0 = Date.now();
+  try {
+    const [[row]] = await pool.query("SELECT v FROM settings WHERE k = 'schema_version'");
+    if (row && row.v === SCHEMA_VERSION) {
+      console.log(`DB ready in ${Date.now() - t0}ms (region ${process.env.VERCEL_REGION || 'local'})`);
+      return;
+    }
+  } catch { /* fresh database: settings table does not exist yet */ }
+
   const sql = fs.readFileSync(path.join(__dirname, '..', 'db', 'schema.sql'), 'utf8');
   const stmts = sql.split(/;\s*\n/).map(s => s.split('\n').filter(l => !l.trim().startsWith('--')).join('\n').trim()).filter(Boolean);
-  for (const stmt of stmts) {
-    await pool.query(stmt);
-  }
-  for (const [k, v] of Object.entries(DEFAULT_SETTINGS)) {
-    await pool.query('INSERT IGNORE INTO settings (k, v) VALUES (?, ?)', [k, v]);
-  }
+  for (const stmt of stmts) await pool.query(stmt);
+
+  // Columns added after the first release.
+  await ensureColumn('products', 'model_code', 'VARCHAR(60) NULL AFTER code');
+  await ensureColumn('sales', 'offline_ref', 'VARCHAR(30) NULL AFTER client_uuid');
+
+  await pool.query('INSERT IGNORE INTO settings (k, v) VALUES ' + Object.keys(DEFAULT_SETTINGS).map(() => '(?, ?)').join(','),
+    Object.entries(DEFAULT_SETTINGS).flat());
   const [[{ n }]] = await pool.query('SELECT COUNT(*) n FROM categories');
-  if (!n) for (const c of DEFAULT_CATEGORIES) await pool.query('INSERT INTO categories (name) VALUES (?)', [c]);
+  if (!n) await pool.query('INSERT INTO categories (name) VALUES ' + DEFAULT_CATEGORIES.map(() => '(?)').join(','), DEFAULT_CATEGORIES);
   const [[{ u }]] = await pool.query('SELECT COUNT(*) u FROM users');
   if (!u) {
-    const pw = process.env.ADMIN_PASSWORD || 'admin123';
     await pool.query('INSERT INTO users (username, name, role, password_hash) VALUES (?,?,?,?)',
-      ['admin', 'Owner', 'admin', await bcrypt.hash(pw, 12)]);
-    console.log("Created initial admin user \"admin\" (password from ADMIN_PASSWORD, default admin123). Change it after first login.");
+      ['admin', 'Owner', 'admin', await bcrypt.hash(process.env.ADMIN_PASSWORD || 'admin123', 12)]);
+    console.log('Created initial admin user "admin" (password from ADMIN_PASSWORD, default admin123). Change it after first login.');
   }
+  await pool.query("REPLACE INTO settings (k, v) VALUES ('schema_version', ?)", [SCHEMA_VERSION]);
+  console.log(`DB migrated to v${SCHEMA_VERSION} in ${Date.now() - t0}ms (region ${process.env.VERCEL_REGION || 'local'})`);
 }
 
 // Run fn inside a transaction; fn receives a connection.

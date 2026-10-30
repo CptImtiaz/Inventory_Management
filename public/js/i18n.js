@@ -62,6 +62,17 @@ const STRINGS = {
   synced: ['offline sales synced', 'অফলাইন বিক্রয় সিঙ্ক হয়েছে'], sync_failed: ['could not sync', 'সিঙ্ক ব্যর্থ'],
   admin_only: ['Settings are available to Admin only', 'সেটিংস শুধুমাত্র অ্যাডমিনের জন্য'],
   brands: ['Brands', 'ব্র্যান্ড'], language: ['বাংলা', 'English'],
+  model_code: ['Code / model / barcode', 'কোড / মডেল / বারকোড'], bill_discount: ['Discount on whole bill', 'পুরো বিলে ছাড়'],
+  item_discount: ['Item discount', 'পণ্যে ছাড়'], all_categories: ['All', 'সব'], add_more: ['Tap a product to add it', 'যোগ করতে পণ্যে চাপুন'],
+  checkout: ['Checkout', 'চেকআউট'], items: ['items', 'টি পণ্য'], clear: ['Clear', 'মুছুন'], out_of_stock: ['Out of stock', 'স্টক নেই'],
+  vs_yesterday: ['vs yesterday', 'গতকালের তুলনায়'], this_month: ['This month', 'এই মাস'], last_30: ['Last 30 days', 'গত ৩০ দিন'],
+  top_products: ['Top products', 'সেরা পণ্য'], recent_sales: ['Recent sales', 'সাম্প্রতিক বিক্রয়'], dues_total: ['Customer dues', 'গ্রাহকের বাকি'],
+  customers_owing: ['customers owing', 'জন গ্রাহকের বাকি'], sales_trend: ['Sales trend', 'বিক্রয়ের ধারা'], see_all: ['See all', 'সব দেখুন'],
+  demo_data: ['Demo data', 'ডেমো ডেটা'], load_demo: ['Load demo data', 'ডেমো ডেটা লোড করুন'],
+  demo_hint: ['Fills an empty shop with ~40 products, 28 customers and two months of sales so you can try every screen. Only works before the first real sale.', 'খালি দোকানে ~৪০টি পণ্য, ২৮ জন গ্রাহক ও দুই মাসের বিক্রয় যোগ করে। প্রথম আসল বিক্রয়ের আগেই কেবল কাজ করে।'],
+  demo_done: ['Demo data loaded', 'ডেমো ডেটা লোড হয়েছে'], demo_logins: ['Demo staff logins (shown once — note them down):', 'ডেমো স্টাফ লগইন (একবারই দেখানো হবে):'],
+  offline_ref: ['Offline ref.', 'অফলাইন নং'], welcome: ['Welcome back', 'স্বাগতম'], sign_in_hint: ['Sign in to continue', 'চালিয়ে যেতে লগ ইন করুন'],
+  theme: ['Theme', 'থিম'], tagline: ['Inventory & Sales', 'মজুদ ও বিক্রয়'], loading: ['Loading…', 'লোড হচ্ছে…'],
 };
 
 let LANG = 'en';

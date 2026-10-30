@@ -5,10 +5,10 @@ process.env.TZ = process.env.APP_TZ || 'Asia/Dhaka';
 const path = require('path');
 const express = require('express');
 const helmet = require('helmet');
-const session = require('express-session');
-const MySQLStore = require('express-mysql-session')(session);
+const cookieSession = require('cookie-session');
 const { pool, migrate } = require('./db');
 const { runArchive } = require('./archiver');
+const { sessionGuard } = require('./auth');
 
 const IDLE_MS = 30 * 60 * 1000; // auto logout after 30 minutes of inactivity
 const onVercel = !!process.env.VERCEL;
@@ -34,16 +34,17 @@ app.get('/api/cron/archive', async (req, res, next) => {
   try { res.json({ archived: await runArchive() }); } catch (e) { next(e); }
 });
 
-app.use(session({
+// Signed, HTTP-only cookie session: no database round trip per request.
+// Idle timeout and "is this user still active?" are enforced by sessionGuard.
+app.use(cookieSession({
   name: 'ims.sid',
-  secret: process.env.SESSION_SECRET || 'change-me-in-.env',
-  store: new MySQLStore({ createDatabaseTable: false }, pool), // table is created by db/schema.sql
-  resave: false,
-  saveUninitialized: false,
-  rolling: true, // every request pushes the expiry forward → idle timeout
-  proxy: behindProxy,
-  cookie: { httpOnly: true, sameSite: 'lax', secure: useTls || behindProxy, maxAge: IDLE_MS },
+  keys: [process.env.SESSION_SECRET || 'change-me-in-.env'],
+  httpOnly: true,
+  sameSite: 'lax',
+  secure: useTls || behindProxy,
+  maxAge: IDLE_MS,
 }));
+app.use('/api', sessionGuard(IDLE_MS));
 
 app.use('/api', require('./routes/auth'));
 app.use('/api', require('./routes/catalog'));

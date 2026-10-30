@@ -36,12 +36,15 @@ const Offline = {
   settings() { return LS.get('ims.settings', {}); },
   queue() { return LS.get('ims.queue', []); },
 
+  // One request returns settings, brands, categories and products; cache them for offline use.
   async refresh() {
-    const [products, settings] = await Promise.all([api('/products'), api('/settings')]);
-    LS.set('ims.catalog', products);
-    LS.set('ims.settings', settings);
-    return products;
+    const data = await api('/bootstrap');
+    LS.set('ims.catalog', data.products);
+    LS.set('ims.settings', data.settings);
+    LS.set('ims.lookups', { brands: data.brands, categories: data.categories });
+    return data;
   },
+  lookups() { return LS.get('ims.lookups', { brands: [], categories: [] }); },
 
   // Queue a sale and update the local stock copy so the next search is accurate.
   enqueue(sale) {

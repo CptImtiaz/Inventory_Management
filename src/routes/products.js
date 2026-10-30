@@ -10,7 +10,7 @@ router.get('/products', requireLogin, wrap(async (req, res) => {
   const { q, category_id, brand_id, low, inactive } = req.query;
   const where = [], args = [];
   if (!inactive) where.push('p.active = 1');
-  if (q) { where.push('(p.name LIKE ? OR p.code LIKE ? OR b.name LIKE ?)'); args.push(`%${q}%`, `%${q}%`, `%${q}%`); }
+  if (q) { where.push('(p.name LIKE ? OR p.code LIKE ? OR p.model_code LIKE ? OR b.name LIKE ?)'); args.push(...Array(4).fill(`%${q}%`)); }
   if (category_id) { where.push('p.category_id = ?'); args.push(category_id); }
   if (brand_id) { where.push('p.brand_id = ?'); args.push(brand_id); }
   if (low) where.push('p.stock_qty <= p.threshold');
@@ -19,9 +19,24 @@ router.get('/products', requireLogin, wrap(async (req, res) => {
   res.json(rows);
 }));
 
+// Everything the app needs at startup in one request: settings, lookups and the product
+// catalogue (also cached on the device for offline selling).
+router.get('/bootstrap', requireLogin, wrap(async (req, res) => {
+  const q = sql => pool.query(sql).then(r => r[0]);
+  const [settings, brands, categories, products] = await Promise.all([
+    q('SELECT k, v FROM settings'),
+    q('SELECT id, name FROM brands WHERE active = 1 ORDER BY name'),
+    q('SELECT id, name FROM categories WHERE active = 1 ORDER BY name'),
+    q(`${BASE} WHERE p.active = 1 ORDER BY p.name`),
+  ]);
+  if (!hasRole(req.session.user, 'manager')) products.forEach(r => { delete r.purchase_price; delete r.margin; });
+  res.json({ user: req.session.user, settings: Object.fromEntries(settings.map(r => [r.k, r.v])), brands, categories, products });
+}));
+
 function readProduct(body) {
   const p = {
     name: String(body.name || '').trim(),
+    model_code: String(body.model_code || '').trim().slice(0, 60) || null,
     brand_id: body.brand_id ? +body.brand_id : null,
     category_id: +body.category_id,
     purchase_price: +body.purchase_price || 0,

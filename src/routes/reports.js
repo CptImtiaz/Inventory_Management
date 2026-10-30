@@ -19,7 +19,7 @@ async function dailyReport(date) {
   const [categories] = await pool.query(
     `SELECT c.name category, SUM(i.qty) qty, SUM(i.line_total) sales, SUM(i.line_total - i.unit_cost * i.qty) profit
      FROM sale_items i JOIN sales s ON s.id = i.sale_id JOIN categories c ON c.id = i.category_id
-     WHERE s.created_at BETWEEN ? AND ? GROUP BY c.id ORDER BY sales DESC`, [from, to]);
+     WHERE s.created_at BETWEEN ? AND ? GROUP BY c.id, c.name ORDER BY sales DESC`, [from, to]);
   const [transactions] = await pool.query(
     `SELECT s.invoice_no, TIME(s.created_at) time, c.name customer, s.total, s.cash_paid, s.credit_amount, u.name salesperson
      FROM sales s JOIN customers c ON c.id = s.customer_id JOIN users u ON u.id = s.salesperson_id
@@ -56,7 +56,7 @@ async function monthlyReport(month) {
     `SELECT c.name category, SUM(i.qty) qty, SUM(i.line_total) sales, SUM(i.unit_cost * i.qty) cost,
             SUM(i.line_total - i.unit_cost * i.qty) profit
      FROM sale_items i JOIN sales s ON s.id = i.sale_id JOIN categories c ON c.id = i.category_id
-     WHERE s.created_at BETWEEN ? AND ? GROUP BY c.id ORDER BY sales DESC`, [from, to]);
+     WHERE s.created_at BETWEEN ? AND ? GROUP BY c.id, c.name ORDER BY sales DESC`, [from, to]);
   // Stock consumed (sales + negative adjustments) vs restocked (restock, opening stock, positive adjustments).
   const [stock] = await pool.query(
     `SELECT p.code, p.name, c.name category,
@@ -65,7 +65,7 @@ async function monthlyReport(month) {
             -SUM(CASE WHEN m.type = 'adjustment' AND m.change_qty < 0 THEN m.change_qty ELSE 0 END) written_off,
             p.stock_qty current_stock
      FROM stock_movements m JOIN products p ON p.id = m.product_id JOIN categories c ON c.id = p.category_id
-     WHERE m.created_at BETWEEN ? AND ? GROUP BY p.id ORDER BY c.name, p.name`, [from, to]);
+     WHERE m.created_at BETWEEN ? AND ? GROUP BY p.id, p.code, p.name, c.name, p.stock_qty ORDER BY c.name, p.name`, [from, to]);
   const [daily] = await pool.query(
     `SELECT DATE(created_at) day, COUNT(*) transactions, SUM(total) revenue, SUM(total - cost_total) profit
      FROM sales WHERE created_at BETWEEN ? AND ? GROUP BY DATE(created_at) ORDER BY day`, [from, to]);
@@ -183,6 +183,48 @@ async function sendSingle(res, kind, label, title, rows, format) {
   await wb.xlsx.write(res);
   res.end();
 }
+
+// Everything the dashboard needs in one request (queries run in parallel).
+router.get('/reports/dashboard', requireRole('manager'), wrap(async (req, res) => {
+  const today = new Date().toLocaleDateString('en-CA');
+  const q = (sql, args) => pool.query(sql, args).then(r => r[0]);
+  const [todayRows, yRows, series, mtdRows, top, cats, low, recent, dues] = await Promise.all([
+    q(`SELECT COUNT(*) transactions, COALESCE(SUM(total),0) gross, COALESCE(SUM(total - cost_total),0) profit,
+              COALESCE(SUM(cash_paid),0) cash, COALESCE(SUM(credit_amount),0) credit
+       FROM sales WHERE created_at >= ? AND created_at < ? + INTERVAL 1 DAY`, [today, today]),
+    q(`SELECT COALESCE(SUM(total),0) gross FROM sales WHERE created_at >= ? - INTERVAL 1 DAY AND created_at < ?`, [today, today]),
+    q(`SELECT DATE(created_at) day, SUM(total) revenue, SUM(total - cost_total) profit, COUNT(*) n
+       FROM sales WHERE created_at >= ? - INTERVAL 29 DAY GROUP BY DATE(created_at) ORDER BY day`, [today]),
+    q(`SELECT COUNT(*) transactions, COALESCE(SUM(total),0) revenue, COALESCE(SUM(total - cost_total),0) profit
+       FROM sales WHERE created_at >= DATE_FORMAT(?, '%Y-%m-01')`, [today]),
+    q(`SELECT i.product_name name, SUM(i.qty) qty, SUM(i.line_total) revenue FROM sale_items i JOIN sales s ON s.id = i.sale_id
+       WHERE s.created_at >= ? - INTERVAL 29 DAY GROUP BY i.product_id, i.product_name ORDER BY revenue DESC LIMIT 5`, [today]),
+    q(`SELECT c.name category, SUM(i.line_total) revenue FROM sale_items i JOIN sales s ON s.id = i.sale_id
+       JOIN categories c ON c.id = i.category_id WHERE s.created_at >= ? - INTERVAL 29 DAY GROUP BY c.id, c.name ORDER BY revenue DESC`, [today]),
+    q(`SELECT p.id, p.code, p.name, c.name category, p.stock_qty, p.threshold FROM products p JOIN categories c ON c.id = p.category_id
+       WHERE p.active = 1 AND p.stock_qty <= p.threshold ORDER BY p.stock_qty LIMIT 8`),
+    q(`SELECT s.id, s.invoice_no, s.created_at, s.total, s.credit_amount, c.name customer FROM sales s
+       JOIN customers c ON c.id = s.customer_id ORDER BY s.id DESC LIMIT 6`),
+    q('SELECT COALESCE(SUM(credit_balance),0) total, COUNT(*) customers FROM customers WHERE credit_balance > 0'),
+  ]);
+  const t = todayRows[0];
+  // Fill missing days so the chart has 30 evenly spaced bars.
+  const byDay = Object.fromEntries(series.map(s => [s.day, s]));
+  const days = Array.from({ length: 30 }, (_, i) => {
+    const d = new Date(); d.setDate(d.getDate() - 29 + i);
+    const k = d.toLocaleDateString('en-CA');
+    return { day: k, revenue: r2(byDay[k]?.revenue), profit: r2(byDay[k]?.profit), n: +(byDay[k]?.n || 0) };
+  });
+  res.json({
+    today: { transactions: t.transactions, gross: r2(t.gross), profit: r2(t.profit), cash: r2(t.cash), credit: r2(t.credit), yesterday: r2(yRows[0].gross) },
+    month: { transactions: mtdRows[0].transactions, revenue: r2(mtdRows[0].revenue), profit: r2(mtdRows[0].profit) },
+    series: days,
+    top: top.map(x => ({ ...x, qty: +x.qty, revenue: r2(x.revenue) })),
+    categories: cats.map(x => ({ ...x, revenue: r2(x.revenue) })),
+    low, recent,
+    dues: { total: r2(dues[0].total), customers: dues[0].customers },
+  });
+}));
 
 // Low-stock alert list for the dashboard.
 router.get('/reports/low-stock', requireRole('manager'), wrap(async (req, res) => {

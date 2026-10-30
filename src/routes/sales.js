@@ -57,6 +57,23 @@ async function createSale(user, body) {
       lines.push({ p, qty, unit, discount, line_total: r2(gross - discount) });
     }
 
+    // Per-transaction discount (the checkout textbox): spread over the lines in proportion to
+    // their value so every line still records original price, discount and final price.
+    const extra = r2(+body.extra_discount || 0);
+    if (extra) {
+      if (extra < 0) throw new HttpError(400, 'Invalid discount');
+      if (!canDiscount) throw new HttpError(403, 'Only a Manager or Admin can apply discounts');
+      const base = lines.reduce((s, l) => s + l.line_total, 0);
+      if (extra > base) throw new HttpError(400, 'Discount is larger than the bill');
+      let left = extra;
+      lines.forEach((l, i) => {
+        const share = i === lines.length - 1 ? left : r2(extra * l.line_total / base);
+        left = r2(left - share);
+        l.discount = r2(l.discount + share);
+        l.line_total = r2(l.line_total - share);
+      });
+    }
+
     const subtotal = r2(lines.reduce((s, l) => s + l.unit * l.qty, 0));
     const discount_total = r2(lines.reduce((s, l) => s + l.discount, 0));
     const total = r2(subtotal - discount_total);
@@ -87,7 +104,7 @@ async function createSale(user, body) {
     const invoice_no = `INV-${now.getFullYear()}-${String(seq).padStart(6, '0')}`;
 
     const [sr] = await conn.query('INSERT INTO sales SET ?', [{
-      invoice_no, client_uuid: body.client_uuid || null, created_at: sqlDate(when), customer_id: c.id,
+      invoice_no, client_uuid: body.client_uuid || null, offline_ref: offline ? String(body.offline_ref || '').slice(0, 30) || null : null, created_at: sqlDate(when), customer_id: c.id,
       subtotal, discount_total, total, cost_total, cash_paid, credit_amount, payment_type,
       salesperson_id: user.id, offline: offline ? 1 : 0,
     }]);
@@ -134,10 +151,10 @@ router.get('/sales', requireLogin, wrap(async (req, res) => {
   if (!req.query.archived) where.push('s.archived = 0');
   if (req.query.from) { where.push('s.created_at >= ?'); args.push(req.query.from + ' 00:00:00'); }
   if (req.query.to) { where.push('s.created_at <= ?'); args.push(req.query.to + ' 23:59:59'); }
-  if (req.query.q) { where.push('(s.invoice_no LIKE ? OR c.name LIKE ? OR c.phone LIKE ?)'); args.push(...Array(3).fill(`%${req.query.q}%`)); }
+  if (req.query.q) { where.push('(s.invoice_no LIKE ? OR s.offline_ref LIKE ? OR c.name LIKE ? OR c.phone LIKE ?)'); args.push(...Array(4).fill(`%${req.query.q}%`)); }
   if (!hasRole(u, 'manager')) { where.push('s.salesperson_id = ? AND DATE(s.created_at) = CURDATE()'); args.push(u.id); }
   const [rows] = await pool.query(
-    `SELECT s.id, s.invoice_no, s.created_at, s.total, s.cash_paid, s.credit_amount, s.payment_type, s.offline,
+    `SELECT s.id, s.invoice_no, s.offline_ref, s.created_at, s.total, s.cash_paid, s.credit_amount, s.payment_type, s.offline,
             c.name customer, c.phone, u.name salesperson
      FROM sales s JOIN customers c ON c.id = s.customer_id JOIN users u ON u.id = s.salesperson_id
      ${where.length ? 'WHERE ' + where.join(' AND ') : ''} ORDER BY s.id DESC LIMIT 500`, args);

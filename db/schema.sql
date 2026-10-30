@@ -26,6 +26,7 @@ CREATE TABLE IF NOT EXISTS categories (
 CREATE TABLE IF NOT EXISTS products (
   id             INT AUTO_INCREMENT PRIMARY KEY,
   code           VARCHAR(30)   NOT NULL UNIQUE,         -- auto-generated Product ID, e.g. P000123
+  model_code     VARCHAR(60)   NULL,                    -- manufacturer model / barcode, searchable at POS
   name           VARCHAR(150)  NOT NULL,
   brand_id       INT           NULL,
   category_id    INT           NOT NULL,
@@ -67,6 +68,7 @@ CREATE TABLE IF NOT EXISTS sales (
   id             INT AUTO_INCREMENT PRIMARY KEY,
   invoice_no     VARCHAR(30)   NOT NULL UNIQUE,
   client_uuid    VARCHAR(64)   NULL UNIQUE,              -- idempotency key for offline sync
+  offline_ref    VARCHAR(30)   NULL,                    -- provisional number printed while offline
   created_at     DATETIME      NOT NULL,
   customer_id    INT           NOT NULL,
   subtotal       DECIMAL(12,2) NOT NULL,                 -- sum of original prices
@@ -130,11 +132,3 @@ CREATE TABLE IF NOT EXISTS counters (
   value INT NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- Login sessions (express-mysql-session). Created here so it is retried with the
--- rest of the schema if the database was unreachable when the app first started.
-CREATE TABLE IF NOT EXISTS sessions (
-  session_id VARCHAR(128) COLLATE utf8mb4_bin NOT NULL,
-  expires    INT(11) UNSIGNED NOT NULL,
-  data       MEDIUMTEXT COLLATE utf8mb4_bin,
-  PRIMARY KEY (session_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

@@ -15,13 +15,13 @@ It is an installable PWA that keeps working offline.
 cp .env.example .env        # fill in your MySQL details and a SESSION_SECRET
 npm install
 npm start                   # creates tables, default categories and the admin user on first run
-npm run seed                # optional: demo products + manager/sales users
+npm run seed                # optional: demo data (or Settings → Load demo data)
 ```
 
 Open http://localhost:3000 and log in as **admin / admin123** (or whatever `ADMIN_PASSWORD` is set to).
 Change this password straight away under **Settings → Change my password**.
 
-Demo logins after `npm run seed`: `manager / manager123`, `sales / sales123`.
+Demo data (40 products, 28 customers, ~2 months of sales) can be loaded from **Settings → Load demo data** or `npm run seed`, only while the shop has no sales. It also creates `manager` and `sales` logins with random passwords, which are shown once.
 
 With Docker (bundles a MySQL container): `docker compose up --build`.
 
@@ -47,6 +47,8 @@ The repo is set up for Vercel (`vercel.json` + `api/index.js`). `public/` is ser
 ---
 
 ## Requirements coverage
+
+See **[REQUIREMENTS-CHECK.md](REQUIREMENTS-CHECK.md)** for the item-by-item checklist.
 
 | Requirement | Where / how |
 |---|---|
