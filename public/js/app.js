@@ -35,7 +35,7 @@ function toast(msg, kind = 'ok') {
   setTimeout(() => el.remove(), 4000);
 }
 
-function modal(title, bodyHtml, onSubmit, { submitLabel = t('save'), wide = false } = {}) {
+function modal(title, bodyHtml, onSubmit, { submitLabel = t('save'), wide = false, danger = false } = {}) {
   const wrap = document.createElement('div');
   wrap.className = 'modal-back';
   wrap.innerHTML = `<form class="modal ${wide ? 'wide' : ''}" novalidate>
@@ -43,7 +43,7 @@ function modal(title, bodyHtml, onSubmit, { submitLabel = t('save'), wide = fals
     <div class="modal-body">${bodyHtml}</div>
     <p class="err" hidden></p>
     <div class="modal-foot">${onSubmit ? `<button type="button" class="btn ghost" data-close>${t('cancel')}</button>
-      <button class="btn primary">${esc(submitLabel)}</button>` : `<button type="button" class="btn" data-close>OK</button>`}</div>
+      <button class="btn primary${danger ? ' danger-fill' : ''}">${esc(submitLabel)}</button>` : `<button type="button" class="btn" data-close>OK</button>`}</div>
   </form>`;
   document.body.appendChild(wrap);
   const form = $('form', wrap);
@@ -947,7 +947,8 @@ VIEWS.settings = async (main, _, tok) => {
           ${table([{ label: t('name'), html: u => `<div class="person"><span class="avatar sm">${esc(initials(u.name))}</span><div><b>${esc(u.name)}</b><small class="muted block">${esc(u.username)}</small></div></div>` },
             { label: t('role'), html: u => `<span class="badge brand">${roleName(u.role)}</span>` },
             { label: t('status'), html: u => u.active ? `<span class="badge ok">${t('active')}</span>` : `<span class="badge">${t('inactive')}</span>` },
-            { label: '', cls: 'actions', html: u => `<button class="btn sm ghost" data-user="${u.id}" title="${t('edit')}">${icon('edit')}</button>` }], users)}
+            { label: '', cls: 'actions', html: u => `<button class="btn sm ghost" data-user="${u.id}" title="${t('edit')}">${icon('edit')}</button>
+              ${u.id === App.user.id ? '' : `<button class="btn sm ghost danger" data-deluser="${u.id}" title="${t('delete_user')}" aria-label="${t('delete_user')}">${icon('trash')}</button>`}` }], users)}
           <div class="pad"><button class="btn ghost sm" id="myPw">${icon('lock')} ${t('change_password')}</button></div>
         </section>
         <section class="card demo"><div class="card-head"><h2>${icon('sparkles')} ${t('demo_data')}</h2></div>
@@ -988,6 +989,11 @@ VIEWS.settings = async (main, _, tok) => {
     });
     const box = $('.modal #pwBox');
     $('.modal #resetPw').onchange = e => { box.hidden = !e.target.checked; if (e.target.checked) { const i = $('input', box); i.value = ''; i.focus(); } };
+  });
+  $$('[data-deluser]', main).forEach(b => b.onclick = () => {
+    const u = users.find(x => x.id === +b.dataset.deluser);
+    modal(`${t('delete_user')} — ${u.username}`, `<p class="notice">${icon('alert')} ${t('delete_user_hint').replace('{name}', esc(u.name))}</p>`,
+      async () => { await api(`/users/${u.id}`, { method: 'DELETE' }); toast(t('saved')); reload(); }, { submitLabel: t('delete_user'), danger: true });
   });
   $('#myPw').onclick = () => modal(t('change_password'), `${field(t('current_password'), 'current', '', 'password', 'required autocomplete="current-password"')}
     ${field(t('new_password'), 'password', '', 'password', 'required minlength="6" autocomplete="new-password"')}`,

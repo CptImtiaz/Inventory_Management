@@ -76,6 +76,8 @@ const STRINGS = {
   cash_partial: ['Cash — partial payment', 'নগদ — আংশিক পরিশোধ'], cash_full_paid: ['Cash — paid in full', 'নগদ — সম্পূর্ণ পরিশোধ'],
   show_password: ['Show password', 'পাসওয়ার্ড দেখুন'], hide_password: ['Hide password', 'পাসওয়ার্ড লুকান'],
   set_new_password: ['Set a new password for this user', 'এই ব্যবহারকারীর নতুন পাসওয়ার্ড দিন'], pw_min: ['Password must be at least 6 characters', 'পাসওয়ার্ড কমপক্ষে ৬ অক্ষরের হতে হবে'],
+  delete_user: ['Delete user', 'ব্যবহারকারী মুছুন'],
+  delete_user_hint: ['{name} will no longer be able to log in and will be removed from the user list. Their past sales stay in the invoices and reports.', '{name} আর লগ ইন করতে পারবেন না এবং তালিকা থেকে সরানো হবে। আগের বিক্রয় চালান ও রিপোর্টে থাকবে।'],
   theme: ['Theme', 'থিম'], tagline: ['Inventory & Sales', 'মজুদ ও বিক্রয়'], loading: ['Loading…', 'লোড হচ্ছে…'],
 };
 

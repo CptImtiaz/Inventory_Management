@@ -209,6 +209,7 @@ input[type=file] { padding: 8px; }
 .btn:active { transform: translateY(1px); }
 .btn.primary { background: linear-gradient(135deg, var(--brand), var(--brand-2)); color: #fff; border-color: transparent; box-shadow: 0 6px 16px rgba(79,70,229,.28); }
 .btn.primary:hover { filter: brightness(1.07); }
+.btn.primary.danger-fill { background: var(--red); box-shadow: 0 6px 16px rgba(220,38,38,.28); }
 .btn.ghost { background: transparent; border-color: transparent; }
 .btn.ghost:hover { background: var(--surface-2); }
 .btn.danger { color: var(--red); }

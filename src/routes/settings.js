@@ -31,7 +31,7 @@ router.put('/settings', requireRole('admin'), wrap(async (req, res) => {
 const ROLES = ['admin', 'manager', 'salesperson'];
 
 router.get('/users', requireRole('admin'), wrap(async (req, res) => {
-  const [rows] = await pool.query('SELECT id, username, name, role, active, created_at FROM users ORDER BY active DESC, name');
+  const [rows] = await pool.query('SELECT id, username, name, role, active, created_at FROM users WHERE deleted = 0 ORDER BY active DESC, name');
   res.json(rows);
 }));
 
@@ -60,7 +60,8 @@ router.put('/users/:id', requireRole('admin'), wrap(async (req, res) => {
   const { name, role, active, password } = req.body;
   if (!ROLES.includes(role)) throw new HttpError(400, 'Invalid role');
   if (id === req.session.user.id && (role !== 'admin' || !active)) throw new HttpError(400, 'You cannot demote or deactivate yourself');
-  await pool.query('UPDATE users SET name = ?, role = ?, active = ? WHERE id = ?', [String(name).trim(), role, active ? 1 : 0, id]);
+  const [upd] = await pool.query('UPDATE users SET name = ?, role = ?, active = ? WHERE id = ? AND deleted = 0', [String(name).trim(), role, active ? 1 : 0, id]);
+  if (!upd.affectedRows) throw new HttpError(404, 'User not found');
   if (password) {
     checkPassword(password);
     await pool.query('UPDATE users SET password_hash = ? WHERE id = ?', [await bcrypt.hash(password, 12), id]);
@@ -71,6 +72,25 @@ router.put('/users/:id', requireRole('admin'), wrap(async (req, res) => {
 }));
 
 // Any user may change their own password.
+// Delete a user (Admin/Owner only). The account can never log in again and disappears from
+// the user list; the person's name stays on their past invoices and in the audit log,
+// so sales history and reports are not affected. The username becomes free to reuse.
+router.delete('/users/:id', requireRole('admin'), wrap(async (req, res) => {
+  const id = +req.params.id;
+  if (id === req.session.user.id) throw new HttpError(400, 'You cannot delete your own account');
+  const [[u]] = await pool.query('SELECT id, username, role FROM users WHERE id = ? AND deleted = 0', [id]);
+  if (!u) throw new HttpError(404, 'User not found');
+  if (u.role === 'admin') {
+    const [[{ n }]] = await pool.query("SELECT COUNT(*) n FROM users WHERE role = 'admin' AND active = 1 AND deleted = 0 AND id <> ?", [id]);
+    if (!n) throw new HttpError(400, 'At least one active Admin must remain');
+  }
+  await pool.query("UPDATE users SET deleted = 1, active = 0, password_hash = '!', username = ? WHERE id = ?",
+    [`${u.username}~deleted~${id}`.slice(0, 50), id]);
+  forgetUser(id); // signs the user out on this instance at once, others within a minute
+  await audit(null, req.session.user.id, 'user_delete', { id, username: u.username, role: u.role });
+  res.json({ ok: true });
+}));
+
 router.post('/me/password', requireLogin, wrap(async (req, res) => {
   const { current, password } = req.body;
   const [[u]] = await pool.query('SELECT password_hash FROM users WHERE id = ?', [req.session.user.id]);

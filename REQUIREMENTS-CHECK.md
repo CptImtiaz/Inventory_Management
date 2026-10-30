@@ -37,7 +37,7 @@ Each item from the *Inventory & Sales Management System* requirements document, 
 | **M6** Business profile with logo on invoices | ✅ | *Settings* |
 | **M6** Global default margin | ✅ | *Settings* |
 | **M6** Retention / archival period (default 60 days) | ✅ | *Settings*; old sales are archived (hidden from Sales History, never deleted), daily via Vercel Cron |
-| **M6** Users: add / edit / deactivate, assign roles | ✅ | *Settings → Users*; a deactivated user is signed out within a minute |
+| **M6** Users: add / edit / deactivate, assign roles | ✅ | *Settings → Users*; a deactivated user is signed out within a minute. Admin (Owner) can also **delete** a user (not themselves or the last Admin); past invoices keep the person's name |
 | **M6** Categories: add / edit / deactivate | ✅ | *Brands & Categories* |
 
 ## 4. Technical

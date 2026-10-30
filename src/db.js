@@ -42,7 +42,7 @@ const DEFAULT_SETTINGS = {
 
 // Bump when the schema changes; a cold start whose database is already at this version
 // skips the migration entirely (one query instead of ~30 round trips).
-const SCHEMA_VERSION = '3';
+const SCHEMA_VERSION = '4';
 
 async function ensureColumn(table, column, ddl) {
   const [[{ n }]] = await pool.query(
@@ -67,6 +67,7 @@ async function migrate() {
   // Columns added after the first release.
   await ensureColumn('products', 'model_code', 'VARCHAR(60) NULL AFTER code');
   await ensureColumn('sales', 'offline_ref', 'VARCHAR(30) NULL AFTER client_uuid');
+  await ensureColumn('users', 'deleted', 'TINYINT(1) NOT NULL DEFAULT 0 AFTER active');
 
   await pool.query('INSERT IGNORE INTO settings (k, v) VALUES ' + Object.keys(DEFAULT_SETTINGS).map(() => '(?, ?)').join(','),
     Object.entries(DEFAULT_SETTINGS).flat());
