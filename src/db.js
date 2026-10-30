@@ -9,7 +9,10 @@ const pool = mysql.createPool({
   user: process.env.DB_USER || 'shop',
   password: process.env.DB_PASSWORD || '',
   database: process.env.DB_NAME || 'shopdb',
-  ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: true } : undefined,
+  // DB_SSL_CA: the provider's CA certificate (PEM text) for hosts like Aiven that use their own CA.
+  ssl: process.env.DB_SSL === 'true'
+    ? { rejectUnauthorized: true, ...(process.env.DB_SSL_CA ? { ca: process.env.DB_SSL_CA.replace(/\\n/g, '\n') } : {}) }
+    : undefined,
   connectionLimit: process.env.VERCEL ? 3 : 10,
   decimalNumbers: true,
   dateStrings: true,

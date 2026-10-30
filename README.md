@@ -29,7 +29,7 @@ With Docker (bundles a MySQL container): `docker compose up --build`.
 The repo is set up for Vercel (`vercel.json` + `api/index.js`). `public/` is served from the CDN, and every `/api/*` request runs as one serverless function.
 1. **You need a cloud MySQL database.** Vercel doesn't host MySQL. Railway, Aiven, TiDB Cloud and DigitalOcean all work.
 2. Import the GitHub repo in Vercel. Framework preset: *Other*. No build command is needed.
-3. Add the environment variables: `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`, `DB_SSL` (usually `true`), `SESSION_SECRET`, `ADMIN_PASSWORD` and `CRON_SECRET`.
+3. Add the environment variables: `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`, `DB_SSL` (usually `true`), `DB_SSL_CA` (if your provider gives you a CA certificate, e.g. Aiven), `SESSION_SECRET`, `ADMIN_PASSWORD` and `CRON_SECRET`.
    HTTPS and the proxy settings are detected automatically.
 4. Deploy. Tables and the admin user are created on the first request.
    To load demo data, run `npm run seed` once from your computer with the same `DB_*` values in `.env`.
