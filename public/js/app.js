@@ -552,7 +552,7 @@ VIEWS.pos = async (main, _, tok) => {
       payment_type: data.payment_type,
       cash_paid: data.cash_paid === '' ? tt.total : Math.min(+data.cash_paid, data.payment_type === 'cash' ? Infinity : tt.total),
     };
-    if (sale.payment_type === 'cash' && sale.cash_paid < tt.total) return fail(t('amount_paid') + ' < ' + money(tt.total));
+    if (sale.payment_type === 'cash' && sale.cash_paid < tt.total) return fail(t('cash_full').replace('{total}', money(tt.total)).replace('{short}', money(tt.total - sale.cash_paid)));
     btn.disabled = true;
     try {
       const r = await api('/sales', { body: sale });
