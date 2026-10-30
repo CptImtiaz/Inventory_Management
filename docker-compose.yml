@@ -1,0 +1,29 @@
+# Local/self-hosted setup: app + MySQL. For production put a TLS proxy (e.g. Caddy) in front
+# and set TRUST_PROXY=true, or use a cloud MySQL and run only the app service.
+services:
+  db:
+    image: mysql:8.4
+    environment:
+      MYSQL_DATABASE: shopdb
+      MYSQL_USER: shop
+      MYSQL_PASSWORD: shop
+      MYSQL_ROOT_PASSWORD: rootpass
+    volumes: [dbdata:/var/lib/mysql]
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      retries: 20
+  app:
+    build: .
+    ports: ["3000:3000"]
+    environment:
+      DB_HOST: db
+      DB_USER: shop
+      DB_PASSWORD: shop
+      DB_NAME: shopdb
+      SESSION_SECRET: change-me
+      APP_TZ: Asia/Dhaka
+    depends_on:
+      db: { condition: service_healthy }
+volumes:
+  dbdata:
