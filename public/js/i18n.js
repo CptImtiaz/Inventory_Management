@@ -74,6 +74,8 @@ const STRINGS = {
   offline_ref: ['Offline ref.', 'অফলাইন নং'], welcome: ['Welcome back', 'স্বাগতম'], sign_in_hint: ['Sign in to continue', 'চালিয়ে যেতে লগ ইন করুন'],
   partial_hint: ['Leave “Amount paid” empty for full payment, or enter less for a partial payment — the rest is saved as the customer’s due.', 'পুরো টাকার জন্য “পরিশোধিত” খালি রাখুন, অথবা আংশিক পরিশোধের জন্য কম লিখুন — বাকি টাকা গ্রাহকের বকেয়া হিসেবে থাকবে।'],
   cash_partial: ['Cash — partial payment', 'নগদ — আংশিক পরিশোধ'], cash_full_paid: ['Cash — paid in full', 'নগদ — সম্পূর্ণ পরিশোধ'],
+  show_password: ['Show password', 'পাসওয়ার্ড দেখুন'], hide_password: ['Hide password', 'পাসওয়ার্ড লুকান'],
+  set_new_password: ['Set a new password for this user', 'এই ব্যবহারকারীর নতুন পাসওয়ার্ড দিন'], pw_min: ['Password must be at least 6 characters', 'পাসওয়ার্ড কমপক্ষে ৬ অক্ষরের হতে হবে'],
   theme: ['Theme', 'থিম'], tagline: ['Inventory & Sales', 'মজুদ ও বিক্রয়'], loading: ['Loading…', 'লোড হচ্ছে…'],
 };
 

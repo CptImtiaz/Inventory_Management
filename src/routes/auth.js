@@ -7,7 +7,9 @@ const { wrap } = require('../auth');
 const failures = new Map();
 
 router.post('/login', wrap(async (req, res) => {
-  const { username = '', password = '' } = req.body || {};
+  // Usernames are matched without surrounding spaces (users are created trimmed too).
+  const username = String((req.body || {}).username || '').trim();
+  const password = String((req.body || {}).password || '');
   const key = `${username.toLowerCase()}|${req.ip}`;
   const f = failures.get(key);
   if (f && f.count >= 10 && Date.now() - f.at < 15 * 60 * 1000) {

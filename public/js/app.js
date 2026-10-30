@@ -65,8 +65,21 @@ function modal(title, bodyHtml, onSubmit, { submitLabel = t('save'), wide = fals
   return form;
 }
 
-const field = (label, name, value = '', type = 'text', extra = '') =>
-  `<label class="field"><span>${esc(label)}</span><input name="${name}" type="${type}" value="${esc(value)}" ${extra}></label>`;
+// Password fields get an eye button to show/hide what was typed.
+const field = (label, name, value = '', type = 'text', extra = '') => type === 'password'
+  ? `<label class="field"><span>${esc(label)}</span><div class="pw-wrap"><input name="${name}" type="password" value="${esc(value)}" ${extra}>
+      <button type="button" class="pw-eye" data-eye aria-label="${t('show_password')}" title="${t('show_password')}">${icon('eye')}</button></div></label>`
+  : `<label class="field"><span>${esc(label)}</span><input name="${name}" type="${type}" value="${esc(value)}" ${extra}></label>`;
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-eye]'); if (!b) return;
+  e.preventDefault();
+  const input = b.parentElement.querySelector('input');
+  const show = input.type === 'password';
+  input.type = show ? 'text' : 'password';
+  b.innerHTML = icon(show ? 'eyeOff' : 'eye');
+  b.title = b.ariaLabel = t(show ? 'hide_password' : 'show_password');
+  input.focus();
+});
 const select = (label, name, options, value, extra = '') =>
   `<label class="field"><span>${esc(label)}</span><select name="${name}" ${extra}>${options.map(([v, l]) =>
     `<option value="${esc(v)}" ${String(v) === String(value) ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></label>`;
@@ -959,15 +972,22 @@ VIEWS.settings = async (main, _, tok) => {
   const roles = [['salesperson', t('salesperson_role')], ['manager', t('manager')], ['admin', t('admin')]];
   const reload = () => route();
   $('#addUser').onclick = () => modal(t('add_user'), `${field(t('name'), 'name', '', 'text', 'required')}
-    ${field(t('username'), 'username', '', 'text', 'required autocapitalize="off"')}${select(t('role'), 'role', roles, 'salesperson')}
+    ${field(t('username'), 'username', '', 'text', 'required autocapitalize="off" autocomplete="off" spellcheck="false"')}${select(t('role'), 'role', roles, 'salesperson')}
     ${field(t('password'), 'password', '', 'password', 'required minlength="6" autocomplete="new-password"')}`,
   async d => { await api('/users', { body: d }); toast(t('saved')); reload(); });
   $$('[data-user]', main).forEach(b => b.onclick = () => {
     const u = users.find(x => x.id === +b.dataset.user);
     modal(`${t('edit')} — ${u.username}`, `${field(t('name'), 'name', u.name, 'text', 'required')}${select(t('role'), 'role', roles, u.role)}
       ${select(t('status'), 'active', [['1', t('active')], ['0', t('inactive')]], u.active ? '1' : '0')}
-      ${field(`${t('new_password')} (${t('leave_blank')})`, 'password', '', 'password', 'autocomplete="new-password"')}`,
-    async d => { await api(`/users/${u.id}`, { method: 'PUT', body: { ...d, active: d.active === '1' } }); toast(t('saved')); reload(); });
+      <label class="check"><input type="checkbox" name="reset_pw" id="resetPw"> ${t('set_new_password')}</label>
+      <div id="pwBox" hidden>${field(t('new_password'), 'password', '', 'password', 'autocomplete="new-password" minlength="6"')}</div>`,
+    async d => {
+      const body = { name: d.name, role: d.role, active: d.active === '1' };
+      if (d.reset_pw) { if (String(d.password || '').length < 6) throw new Error(t('pw_min')); body.password = d.password; }
+      await api(`/users/${u.id}`, { method: 'PUT', body }); toast(t('saved')); reload();
+    });
+    const box = $('.modal #pwBox');
+    $('.modal #resetPw').onchange = e => { box.hidden = !e.target.checked; if (e.target.checked) { const i = $('input', box); i.value = ''; i.focus(); } };
   });
   $('#myPw').onclick = () => modal(t('change_password'), `${field(t('current_password'), 'current', '', 'password', 'required autocomplete="current-password"')}
     ${field(t('new_password'), 'password', '', 'password', 'required minlength="6" autocomplete="new-password"')}`,
