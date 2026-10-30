@@ -26,7 +26,7 @@ Each item from the *Inventory & Sales Management System* requirements document, 
 | **3.1** Search product by name, ID or code | ✅ | *New Sale* search (also brand and model/barcode); product tiles by category |
 | **3.1** Enter quantity → discount → Add to cart → repeat → customer → payment → confirm → invoice | ✅ | *New Sale*: tap or Enter adds to the cart; qty stepper; confirm opens the invoice |
 | **3.2** Customer name, address, phone required | ✅ | Validated on screen and on the server; returning customers auto-filled by phone, existing due shown |
-| **3.3** Payment type: Cash | ➕ | Cash, plus Credit (Note 2) |
+| **3.3** Payment type: Cash, full or partial | ✅ | Leave *Amount paid* empty for full payment, or enter less; the shortfall is saved as the customer's due (Note 2) |
 | **3.4** Global default margin for new products | ✅ | *Settings*; pre-fills the sale price in *Add product* |
 | **3.4** Manager/Admin per-transaction discount textbox | ✅ | "Discount on whole bill" (`500` or `10%`), plus an optional per-item discount; salespeople can't discount (enforced on the server) |
 | **3.4** Record original price, discount and final price | ✅ | Stored on every invoice line |
@@ -62,5 +62,5 @@ Each item from the *Inventory & Sales Management System* requirements document, 
 
 ## Notes
 1. **Manager role.** The roles table lists only Admin and Salesperson, but Modules 1 and 3 mention a Manager. A Manager can do inventory, discounts, customers/dues and reports, but not Settings.
-2. **Credit.** Section 3.3 lists only Cash, but the invoice (*Outstanding Balance*), reports (*credit extended*, *credit overview*) and data model (*Credit Payment*) require credit sales. *Credit* lets the customer pay part now. Dues are collected in *Customers & Dues*, oldest invoice first.
+2. **Partial cash payment.** The only payment type is Cash, and the customer may pay in full or in part. The unpaid part becomes the customer's due. It feeds the invoice's *Outstanding Balance*, the reports' *credit extended* and *credit overview*, and *Credit Payment* records. Dues are collected in *Customers & Dues*, oldest invoice first. The invoice shows "Cash — paid in full" or "Cash — partial payment".
 3. **Brands and categories** are separate lists that can be combined freely, so any brand can have any number of categories.

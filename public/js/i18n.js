@@ -72,8 +72,8 @@ const STRINGS = {
   demo_hint: ['Fills an empty shop with ~40 products, 28 customers and two months of sales so you can try every screen. Only works before the first real sale.', 'খালি দোকানে ~৪০টি পণ্য, ২৮ জন গ্রাহক ও দুই মাসের বিক্রয় যোগ করে। প্রথম আসল বিক্রয়ের আগেই কেবল কাজ করে।'],
   demo_done: ['Demo data loaded', 'ডেমো ডেটা লোড হয়েছে'], demo_logins: ['Demo staff logins (shown once — note them down):', 'ডেমো স্টাফ লগইন (একবারই দেখানো হবে):'],
   offline_ref: ['Offline ref.', 'অফলাইন নং'], welcome: ['Welcome back', 'স্বাগতম'], sign_in_hint: ['Sign in to continue', 'চালিয়ে যেতে লগ ইন করুন'],
-  cash_full: ['Cash sales must be paid in full ({total}); {short} is missing. If the customer pays the rest later, choose “Credit”. To reduce the price, enter a discount.',
-    'নগদ বিক্রয়ে পুরো টাকা ({total}) দিতে হবে; {short} কম আছে। বাকি টাকা পরে দিলে “বাকি” বেছে নিন। দাম কমাতে ছাড় লিখুন।'],
+  partial_hint: ['Leave “Amount paid” empty for full payment, or enter less for a partial payment — the rest is saved as the customer’s due.', 'পুরো টাকার জন্য “পরিশোধিত” খালি রাখুন, অথবা আংশিক পরিশোধের জন্য কম লিখুন — বাকি টাকা গ্রাহকের বকেয়া হিসেবে থাকবে।'],
+  cash_partial: ['Cash — partial payment', 'নগদ — আংশিক পরিশোধ'], cash_full_paid: ['Cash — paid in full', 'নগদ — সম্পূর্ণ পরিশোধ'],
   theme: ['Theme', 'থিম'], tagline: ['Inventory & Sales', 'মজুদ ও বিক্রয়'], loading: ['Loading…', 'লোড হচ্ছে…'],
 };
 

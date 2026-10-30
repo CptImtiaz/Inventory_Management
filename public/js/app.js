@@ -393,10 +393,7 @@ VIEWS.pos = async (main, _, tok) => {
         <p id="cDue" class="small bad-text"></p>
         <div class="grid2">${field(t('customer_name'), 'name', '', 'text', 'required')}${field(t('address'), 'address', '', 'text', 'required')}</div>
       </details>
-      <div class="seg block">
-        <label><input type="radio" name="payment_type" value="cash" checked> ${icon('coins')} ${t('cash')}</label>
-        <label><input type="radio" name="payment_type" value="credit"> ${icon('credit')} ${t('credit')}</label>
-      </div>
+      <div class="pay-mode">${icon('coins')}<div><b>${t('payment_type')}: ${t('cash')}</b><small>${t('partial_hint')}</small></div></div>
       <div class="grid2">
         ${canDisc ? field(t('bill_discount'), 'extra_discount', '', 'text', `placeholder="${t('discount_hint')}" id="billDisc" autocomplete="off"`) : ''}
         ${field(t('amount_paid'), 'cash_paid', '', 'number', 'min="0" step="0.01" inputmode="decimal" id="cPaid"')}
@@ -467,7 +464,6 @@ VIEWS.pos = async (main, _, tok) => {
   const renderTotals = () => {
     const tt = totals();
     const form = $('#checkout');
-    const type = form.payment_type.value;
     const paid = form.cash_paid.value === '' ? tt.total : +form.cash_paid.value;
     form.cash_paid.placeholder = tt.total.toFixed(2);
     $('#totals').innerHTML = `
@@ -475,8 +471,8 @@ VIEWS.pos = async (main, _, tok) => {
       ${tt.discount ? `<div class="disc"><span>${t('discount')}</span><span>− ${money(tt.discount)}</span></div>` : ''}
       ${tt.billErr ? `<div class="bad-text"><span>${esc(tt.billErr)}</span></div>` : ''}
       <div class="grand"><span>${t('grand_total')}</span><span>${money(tt.total)}</span></div>
-      ${type === 'cash' && paid > tt.total ? `<div><span>${t('change')}</span><span>${money(paid - tt.total)}</span></div>` : ''}
-      ${type === 'credit' ? `<div class="bad-text"><span>${t('outstanding')}</span><span>${money(Math.max(0, tt.total - paid))}</span></div>` : ''}`;
+      ${paid > tt.total ? `<div><span>${t('change')}</span><span>${money(paid - tt.total)}</span></div>` : ''}
+      ${paid < tt.total ? `<div class="bad-text"><span>${t('outstanding')} (${t('due')})</span><span>${money(tt.total - paid)}</span></div>` : ''}`;
     const n = POS.cart.reduce((s, c) => s + c.qty, 0);
     $('#cartCount').textContent = n ? num(n) : '';
   };
@@ -549,10 +545,10 @@ VIEWS.pos = async (main, _, tok) => {
       customer: { name: data.name.trim(), address: data.address.trim(), phone: data.phone.trim() },
       items: POS.cart.map(c => ({ product_id: c.product_id, qty: c.qty, discount: c.discount, unit_price: c.unit_price })),
       extra_discount: tt.bill,
-      payment_type: data.payment_type,
-      cash_paid: data.cash_paid === '' ? tt.total : Math.min(+data.cash_paid, data.payment_type === 'cash' ? Infinity : tt.total),
+      payment_type: 'cash',
+      cash_paid: data.cash_paid === '' ? tt.total : Math.min(+data.cash_paid, tt.total),
     };
-    if (sale.payment_type === 'cash' && sale.cash_paid < tt.total) return fail(t('cash_full').replace('{total}', money(tt.total)).replace('{short}', money(tt.total - sale.cash_paid)));
+    if (!(sale.cash_paid >= 0)) return fail(t('amount_paid') + '?');
     btn.disabled = true;
     try {
       const r = await api('/sales', { body: sale });
@@ -584,7 +580,7 @@ VIEWS.invoice = async (main, id, tok) => {
     const L = q._local;
     provisional = true;
     shop = { name: L.settings.shop_name, address: L.settings.shop_address, phone: L.settings.shop_phone, logo: L.settings.shop_logo };
-    const paid = q.payment_type === 'cash' ? L.totals.total : q.cash_paid;
+    const paid = q.cash_paid;
     // Spread the bill discount over the lines the same way the server will.
     const base = L.cart.reduce((s, c) => s + c.unit_price * c.qty - c.discount, 0);
     let left = L.totals.bill || 0;
@@ -626,7 +622,7 @@ VIEWS.invoice = async (main, id, tok) => {
         <div class="grand"><span>${t('grand_total')}</span><span>${money(sale.total)}</span></div>
         <div><span>${t('amount_paid')}</span><span>${money(sale.cash_paid)}</span></div>
         <div class="${sale.outstanding > 0 ? 'bad-text' : ''}"><span>${t('outstanding')}</span><span>${money(sale.outstanding)}</span></div>
-        <div><span>${t('payment_mode')}</span><span>${sale.payment_type === 'cash' ? t('cash') : t('credit')}</span></div>
+        <div><span>${t('payment_mode')}</span><span>${sale.outstanding > 0 || sale.credit_amount > 0 ? t('cash_partial') : t('cash_full_paid')}</span></div>
       </div>
       <footer>${t('thanks')}</footer>
     </article>`;

@@ -12,7 +12,7 @@ function sqlDate(d) {
 /**
  * Create a sale. Body:
  *   { client_uuid?, offline_at?, customer: {name, address, phone},
- *     items: [{product_id, qty, discount, unit_price?}], payment_type: 'cash'|'credit', cash_paid }
+ *     items: [{product_id, qty, discount, unit_price?}], cash_paid }   (cash_paid < total = partial payment)
  * Online sales use the server's current sale price and reject overselling.
  * Offline sales (offline_at set, replayed by the sync queue) keep the price that was
  * printed on the provisional invoice and are accepted even if stock goes negative —
@@ -79,14 +79,13 @@ async function createSale(user, body) {
     const total = r2(subtotal - discount_total);
     const cost_total = r2(lines.reduce((s, l) => s + l.p.purchase_price * l.qty, 0));
 
-    const payment_type = body.payment_type === 'credit' ? 'credit' : 'cash';
+    // Payment is cash. The customer may pay in full or only part now; any shortfall becomes
+    // the customer's due (credit), collected later under Customers & Dues.
+    // ('credit' is still accepted for sales queued offline by older app versions.)
     let cash_paid = body.cash_paid == null || body.cash_paid === '' ? total : r2(+body.cash_paid);
-    if (payment_type === 'cash') {
-      if (cash_paid < total) throw new HttpError(400, 'Cash payment must cover the full amount. Use “Credit” for partial payment.');
-      cash_paid = total; // change returned to the customer is not revenue
-    } else if (!(cash_paid >= 0 && cash_paid <= total)) {
-      throw new HttpError(400, 'Amount paid must be between 0 and the grand total');
-    }
+    if (!(cash_paid >= 0)) throw new HttpError(400, 'Amount paid must be 0 or more');
+    if (cash_paid > total) cash_paid = total; // change returned to the customer is not revenue
+    const payment_type = cash_paid < total ? 'credit' : 'cash';
     const credit_amount = r2(total - cash_paid);
 
     // Customer: match on phone number, update name/address to latest.
