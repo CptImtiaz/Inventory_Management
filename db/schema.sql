@@ -129,3 +129,12 @@ CREATE TABLE IF NOT EXISTS counters (
   name  VARCHAR(30) PRIMARY KEY,
   value INT NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Login sessions (express-mysql-session). Created here so it is retried with the
+-- rest of the schema if the database was unreachable when the app first started.
+CREATE TABLE IF NOT EXISTS sessions (
+  session_id VARCHAR(128) COLLATE utf8mb4_bin NOT NULL,
+  expires    INT(11) UNSIGNED NOT NULL,
+  data       MEDIUMTEXT COLLATE utf8mb4_bin,
+  PRIMARY KEY (session_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

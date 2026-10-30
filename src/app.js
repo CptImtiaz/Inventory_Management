@@ -37,7 +37,7 @@ app.get('/api/cron/archive', async (req, res, next) => {
 app.use(session({
   name: 'ims.sid',
   secret: process.env.SESSION_SECRET || 'change-me-in-.env',
-  store: new MySQLStore({ createDatabaseTable: true }, pool),
+  store: new MySQLStore({ createDatabaseTable: false }, pool), // table is created by db/schema.sql
   resave: false,
   saveUninitialized: false,
   rolling: true, // every request pushes the expiry forward → idle timeout
@@ -57,6 +57,7 @@ app.use('/api', (req, res) => res.status(404).json({ error: 'Not found' }));
 app.use((err, req, res, next) => {
   const status = err.status || 500;
   if (status >= 500) console.error(err);
+  if (res.headersSent) return; // e.g. a session save failing after the response went out
   res.status(status).json({ error: status >= 500 ? 'Server error' : err.message });
 });
 

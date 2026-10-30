@@ -55,7 +55,7 @@ async function migrate() {
     const pw = process.env.ADMIN_PASSWORD || 'admin123';
     await pool.query('INSERT INTO users (username, name, role, password_hash) VALUES (?,?,?,?)',
       ['admin', 'Owner', 'admin', await bcrypt.hash(pw, 12)]);
-    console.log(`Created initial admin user: admin / ${pw}  (change it in Settings → Users)`);
+    console.log("Created initial admin user \"admin\" (password from ADMIN_PASSWORD, default admin123). Change it after first login.");
   }
 }
 
