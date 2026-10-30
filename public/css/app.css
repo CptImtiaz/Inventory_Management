@@ -288,8 +288,8 @@ dl.kv dd { margin: 0; font-weight: 700; text-align: right; font-variant-numeric:
 .line-total { text-align: right; font-variant-numeric: tabular-nums; }
 .line-total s { display: block; color: var(--muted); font-size: .76rem; }
 .line .rm { width: 30px; min-height: 30px; color: var(--muted); }
-.pay-mode { display: flex; gap: 12px; align-items: flex-start; background: var(--brand-soft); color: var(--text); border-radius: 12px; padding: 12px 14px; margin-bottom: 14px; }
-.pay-mode .ic { color: var(--brand-text); margin-top: 2px; }
+.pay-mode { display: flex; gap: 10px; align-items: center; background: var(--brand-soft); color: var(--text); border-radius: 12px; padding: 12px 14px; margin-bottom: 14px; }
+.pay-mode .ic { color: var(--brand-text); }
 .pay-mode b { display: block; }
 .pay-mode small { color: var(--muted); }
 details.cust { margin-bottom: 12px; }

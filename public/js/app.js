@@ -406,7 +406,7 @@ VIEWS.pos = async (main, _, tok) => {
         <p id="cDue" class="small bad-text"></p>
         <div class="grid2">${field(t('customer_name'), 'name', '', 'text', 'required')}${field(t('address'), 'address', '', 'text', 'required')}</div>
       </details>
-      <div class="pay-mode">${icon('coins')}<div><b>${t('payment_type')}: ${t('cash')}</b><small>${t('partial_hint')}</small></div></div>
+      <div class="pay-mode">${icon('coins')}<b>${t('payment_type')}: ${t('cash')}</b></div>
       <div class="grid2">
         ${canDisc ? field(t('bill_discount'), 'extra_discount', '', 'text', `placeholder="${t('discount_hint')}" id="billDisc" autocomplete="off"`) : ''}
         ${field(t('amount_paid'), 'cash_paid', '', 'number', 'min="0" step="0.01" inputmode="decimal" id="cPaid"')}
